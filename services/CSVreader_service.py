@@ -1,16 +1,16 @@
 import csv
 from data import *
 #Class for CSV Reader
-class CSVreader_service:
 
-def __init__(self):
-    self.table = []
+class CSVReaderService:
+    def __init__(self, filename):
+        self.filename = filename
 
-    def read_file(self, file_name):
-        with open(file_name) as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            table = []
+    def get_requests(self):
+        requests_table = []
+
+        with open(self.filename, mode= "r", newline="") as csvfile:
+            csv_reader = csv.DictReader(csvfile)
             for row in csv_reader:
-                table.append(row)
-    def add_data(self, data):
-        self.table.append(data)
+                requests_table.append(row)
+        return requests_table
