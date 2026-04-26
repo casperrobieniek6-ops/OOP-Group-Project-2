@@ -1,67 +1,52 @@
-"""Input validation helpers for the municipal request system."""
-from datetime import datetime
+from typing import Optional
+
+
+class ValidationError(Exception):
+    """Custom exception for validation errors."""
+    pass
 
 
 class ErrorValidator:
-    """Validates data before it is used to build request objects."""
-
-    VALID_TYPES = {"Maintenance", "EventSupport", "Emergency"}
-    VALID_STATUSES = {"Open", "In Progress", "Closed"}
-
     @staticmethod
-    def require_text(value, field_name):
-        value = str(value).strip()
+    def validate_non_empty(value: str, field_name: str) -> str:
+        value = value.strip()
         if not value:
-            raise ValueError(f"{field_name} cannot be blank.")
+            raise ValidationError(f"{field_name} cannot be empty.")
         return value
 
     @staticmethod
-    def validate_int(value, field_name, minimum=None, maximum=None):
+    def validate_float(value: str, field_name: str) -> Optional[float]:
+        value = value.strip()
+        if value == "":
+            return None
         try:
-            number = int(value)
-        except (TypeError, ValueError):
-            raise ValueError(f"{field_name} must be a whole number.")
-        if minimum is not None and number < minimum:
-            raise ValueError(f"{field_name} must be at least {minimum}.")
-        if maximum is not None and number > maximum:
-            raise ValueError(f"{field_name} must be no more than {maximum}.")
-        return number
-
-    @staticmethod
-    def validate_float(value, field_name, minimum=None):
-        try:
-            number = float(value)
-        except (TypeError, ValueError):
-            raise ValueError(f"{field_name} must be a number.")
-        if minimum is not None and number < minimum:
-            raise ValueError(f"{field_name} must be at least {minimum}.")
-        return number
-
-    @staticmethod
-    def validate_status(value):
-        value = str(value).strip().title()
-        if value not in ErrorValidator.VALID_STATUSES:
-            raise ValueError("Status must be Open, In Progress, or Closed.")
-        return value
-
-    @staticmethod
-    def validate_type(value):
-        cleaned = str(value).strip().lower().replace(" ", "")
-        type_map = {
-            "maintenance": "Maintenance",
-            "eventsupport": "EventSupport",
-            "event": "EventSupport",
-            "emergency": "Emergency",
-        }
-        if cleaned not in type_map:
-            raise ValueError("Request type must be Maintenance, EventSupport, or Emergency.")
-        return type_map[cleaned]
-
-    @staticmethod
-    def validate_date(value, field_name="Date"):
-        value = str(value).strip()
-        try:
-            datetime.strptime(value, "%Y-%m-%d")
+            return float(value)
         except ValueError:
-            raise ValueError(f"{field_name} must use YYYY-MM-DD format.")
-        return value
+            raise ValidationError(f"{field_name} must be a number.")
+
+    @staticmethod
+    def validate_int(value: str, field_name: str) -> Optional[int]:
+        value = value.strip()
+        if value == "":
+            return None
+        try:
+            return int(value)
+        except ValueError:
+            raise ValidationError(f"{field_name} must be an integer.")
+
+    @staticmethod
+    def validate_category(value: str) -> str:
+        allowed = {"maintenance", "event", "emergency"}
+        v = value.strip().lower()
+        if v not in allowed:
+            raise ValidationError(f"Category must be one of: {', '.join(allowed)}.")
+        return v
+
+    @staticmethod
+    def validate_urgency(value: str) -> str:
+        allowed = {"low", "medium", "high", "critical"}
+        v = value.strip().lower()
+        if v not in allowed:
+            raise ValidationError(f"Urgency must be one of: {', '.join(allowed)}.")
+        return v.capitalize()
+
