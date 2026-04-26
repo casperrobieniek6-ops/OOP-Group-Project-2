@@ -1,117 +1,102 @@
 import csv
-from typing import List, Optional
-
-from models import (
-    Request,
-    MaintenanceRequest,
-    EventRequest,
-    EmergencyRequest,
-)
-
+from models.request import Request
+from models.event_service import EventService
+from models.emergency_service import EmergencyService
+from models.maintenence_service import MaintenanceService 
+from services.error_validator import ErrorValidator
 
 class CSVReaderService:
-    """
-    Handles loading and saving service requests from/to CSV.
-    """
+    """Handles reading and writing request data from/to CSV."""
 
-    def __init__(self, filepath: str):
-        self.filepath = filepath
+    def __init__(self, file_path):
+        self.file_path = file_path
 
-    def load_requests(self) -> List[Request]:
-        requests: List[Request] = []
+
+    # LOAD ALL REQUESTS
+
+    def load_requests(self):
+        requests = []
+
         try:
-            with open(self.filepath, newline="", encoding="utf-8") as f:
-                reader = csv.DictReader(f)
+            with open(self.file_path, mode="r", newline="", encoding="utf-8") as file:
+                reader = csv.DictReader(file)
+
                 for row in reader:
-                    req = self._row_to_request(row)
-                    if req is not None:
-                        requests.append(req)
+                    cleaned = ErrorValidator.clean_row(row)
+                    req_obj = self._create_request_object(cleaned)
+                    requests.append(req_obj)
+
         except FileNotFoundError:
-            # No file yet → start with empty list
-            pass
+            print(f"ERROR: CSV file not found at {self.file_path}")
+
         return requests
 
-    def save_requests(self, requests: List[Request]) -> None:
-        fieldnames = [
-            "request_id",
-            "requester_name",
-            "location",
-            "category",
-            "urgency_level",
-            "estimated_cost",
-            "status",
-            "issue_type",
-            "days_open",
-            "expected_attendees",
-            "event_date",
-            "hazard_level",
-            "response_time",
+
+    # CREATE CORRECT SUBCLASS
+
+    def _create_request_object(self, row):
+        """Determines which subclass to instantiate based on available fields."""
+
+        # Emergency request
+        if row.get("hazard_level") not in ("", None):
+            return EmergencyService(
+                row["request_id"],
+                row["requester_name"],
+                row["location"],
+                int(row["urgency_level"]),
+                float(row["estimated_cost"]),
+                row["status"],
+                int(row["hazard_level"]),
+                int(row["response_time_minutes"])
+            )
+
+        # Event support request
+        if row.get("attendees") not in ("", None):
+            return EventService(
+                row["request_id"],
+                row["requester_name"],
+                row["location"],
+                int(row["urgency_level"]),
+                float(row["estimated_cost"]),
+                row["status"],
+                int(row["attendees"]),
+                row["event_date"]
+            )
+
+        # Maintenance request (if you have this class)
+        if row.get("issue_type") not in ("", None):
+            return MaintenanceService(
+                row["request_id"],
+                row["requester_name"],
+                row["location"],
+                int(row["urgency_level"]),
+                float(row["estimated_cost"]),
+                row["status"],
+                row["issue_type"],
+                int(row["days_open"])
+            )
+
+        # Default fallback
+        return Request(**row)
+
+    # -----------------------------
+    # SAVE ALL REQUESTS BACK TO CSV
+    # -----------------------------
+    def save_requests(self, requests):
+        if not requests:
+            print("No requests to save.")
+            return
+
+        # Collect all possible CSV headers
+        headers = [
+            "request_id", "requester_name", "location", "urgency_level",
+            "estimated_cost", "status", "issue_type", "days_open",
+            "attendees", "event_date", "hazard_level", "response_time_minutes"
         ]
-        with open(self.filepath, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+
+        with open(self.file_path, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=headers)
             writer.writeheader()
-            for r in requests:
-                row = {
-                    "request_id": r.request_id,
-                    "requester_name": r.requester_name,
-                    "location": r.location,
-                    "category": r.category,
-                    "urgency_level": r.urgency_level,
-                    "estimated_cost": r.estimated_cost,
-                    "status": r.status,
-                    "issue_type": getattr(r, "issue_type", None),
-                    "days_open": getattr(r, "days_open", None),
-                    "expected_attendees": getattr(r, "expected_attendees", None),
-                    "event_date": getattr(r, "event_date", None),
-                    "hazard_level": getattr(r, "hazard_level", None),
-                    "response_time": getattr(r, "response_time", None),
-                }
-                writer.writerow(row)
 
-    def _row_to_request(self, row: dict) -> Optional[Request]:
-        category = (row.get("category") or "").strip().lower()
-
-        def to_float(v):
-            return float(v) if v not in (None, "", " ") else None
-
-        def to_int(v):
-            return int(v) if v not in (None, "", " ") else None
-
-        base_kwargs = dict(
-            request_id=row.get("request_id", ""),
-            requester_name=row.get("requester_name", ""),
-            location=row.get("location", ""),
-            urgency_level=row.get("urgency_level", "Low"),
-            estimated_cost=to_float(row.get("estimated_cost")),
-            status=row.get("status", "Open"),
-        )
-
-        if category == "maintenance":
-            return MaintenanceRequest(
-                **base_kwargs,
-                issue_type=row.get("issue_type") or None,
-                days_open=to_int(row.get("days_open")),
-            )
-        elif category == "event":
-            return EventRequest(
-                **base_kwargs,
-                expected_attendees=to_int(row.get("expected_attendees")),
-                event_date=row.get("event_date") or None,
-            )
-        elif category == "emergency":
-            return EmergencyRequest(
-                **base_kwargs,
-                hazard_level=row.get("hazard_level") or None,
-                response_time=to_float(row.get("response_time")),
-            )
-        else:
-            # Fallback: plain Request if category unknown
-            return Request(
-                request_id=base_kwargs["request_id"],
-                requester_name=base_kwargs["requester_name"],
-                location=base_kwargs["location"],
-                category=category or "unknown",
-                urgency_level=base_kwargs["urgency_level"],
-                estimated_cost=base_kwargs["estimated_cost"],
-                status=base_kwargs["status"],
-            )
+            for req in requests:
+                writer.writerow(req.to_csv_row())
