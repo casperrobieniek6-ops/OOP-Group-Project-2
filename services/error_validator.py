@@ -1,52 +1,45 @@
-from typing import Optional
-
-
-class ValidationError(Exception):
-    """Custom exception for validation errors."""
-    pass
-
-
 class ErrorValidator:
-    @staticmethod
-    def validate_non_empty(value: str, field_name: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValidationError(f"{field_name} cannot be empty.")
-        return value
 
     @staticmethod
-    def validate_float(value: str, field_name: str) -> Optional[float]:
-        value = value.strip()
-        if value == "":
-            return None
-        try:
-            return float(value)
-        except ValueError:
-            raise ValidationError(f"{field_name} must be a number.")
+    def clean_row(row):
+        """Ensures all expected fields exist and converts invalid values safely."""
+
+        cleaned = {}
+
+        # Required fields
+        cleaned["request_id"] = row.get("request_id", "").strip()
+        cleaned["requester_name"] = row.get("requester_name", "").strip()
+        cleaned["location"] = row.get("location", "").strip()
+        cleaned["status"] = row.get("status", "Open").strip()
+
+        # Numeric fields with safe conversion
+        cleaned["urgency_level"] = ErrorValidator.safe_int(row.get("urgency_level"), default=1)
+        cleaned["estimated_cost"] = ErrorValidator.safe_float(row.get("estimated_cost"), default=0.0)
+        cleaned["days_open"] = ErrorValidator.safe_int(row.get("days_open"), default=0)
+        cleaned["attendees"] = ErrorValidator.safe_int(row.get("attendees"), default=None)
+        cleaned["hazard_level"] = ErrorValidator.safe_int(row.get("hazard_level"), default=None)
+        cleaned["response_time_minutes"] = ErrorValidator.safe_int(row.get("response_time_minutes"), default=None)
+
+        # Strings
+        cleaned["issue_type"] = row.get("issue_type", "").strip()
+        cleaned["event_date"] = row.get("event_date", "").strip()
+
+        return cleaned
 
     @staticmethod
-    def validate_int(value: str, field_name: str) -> Optional[int]:
-        value = value.strip()
-        if value == "":
-            return None
+    def safe_int(value, default=0):
         try:
+            if value in ("", None):
+                return default
             return int(value)
         except ValueError:
-            raise ValidationError(f"{field_name} must be an integer.")
+            return default
 
     @staticmethod
-    def validate_category(value: str) -> str:
-        allowed = {"maintenance", "event", "emergency"}
-        v = value.strip().lower()
-        if v not in allowed:
-            raise ValidationError(f"Category must be one of: {', '.join(allowed)}.")
-        return v
-
-    @staticmethod
-    def validate_urgency(value: str) -> str:
-        allowed = {"low", "medium", "high", "critical"}
-        v = value.strip().lower()
-        if v not in allowed:
-            raise ValidationError(f"Urgency must be one of: {', '.join(allowed)}.")
-        return v.capitalize()
-
+    def safe_float(value, default=0.0):
+        try:
+            if value in ("", None):
+                return default
+            return float(value)
+        except ValueError:
+            return default
