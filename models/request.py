@@ -1,3 +1,4 @@
+#Initialize all attributes of a service request
 class Request:
     def __init__(self, request_id, requester_name, location, urgency_level,
                  estimated_cost, status, issue_type="", days_open=0,
@@ -15,11 +16,14 @@ class Request:
         self.event_date = event_date
         self.hazard_level = hazard_level
         self.response_time_minutes = response_time_minutes
-
+#Converts urgency and hazard for comparison
     def get_recommendation(self):
         urgency = str(self.urgency_level).lower()
         hazard = str(self.hazard_level).lower()
-
+#If urgency is high, returns immediate action message
+#Else if request has been open over 10 days, sends follow up notifying request open too long.
+#Else if status is open, returns assignment message
+#Otherwise, returns no action needed.
         if urgency == "high" or hazard == "high":
             return "Immediate attention required."
         elif self.days_open and int(self.days_open) > 10:
@@ -29,6 +33,7 @@ class Request:
         else:
             return "No immediate action needed."
 
+#Displays all attributes of a request
     def display_request(self):
         return (
             f"ID: {self.request_id} | "
@@ -45,3 +50,19 @@ class Request:
             f"Response Time: {self.response_time_minutes} minutes | "
             f"Recommendation: {self.get_recommendation()}"
         )
+#Converts each object to a dictionary
+    def to_csv_row(self):
+        return {
+            "request_id": self.request_id,
+            "requester_name": self.requester_name,
+            "location": self.location,
+            "urgency_level": self.urgency_level,
+            "estimated_cost": self.estimated_cost,
+            "status": self.status,
+            "issue_type": self.issue_type,
+            "days_open": self.days_open,
+            "attendees": self.attendees,
+            "event_date": self.event_date,
+            "hazard_level": self.hazard_level,
+            "response_time_minutes": self.response_time_minutes
+        }

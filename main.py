@@ -1,50 +1,13 @@
 from models.request import Request
 from services.CSVreader_service import CSVReaderService
 
-def row_to_request(row):
-    try:
-        return Request(
-            row.get('request_id', ''),
-            row.get('requester_name', ''),
-            row.get('location', ''),
-            row.get('urgency_level', ''),
-            float(row.get('estimated_cost', 0) or 0),
-            row.get('status', ''),
-            row.get('issue_type', ''),
-            int(row.get('days_open', 0) or 0),
-            int(row.get('attendees', 0) or 0),
-            row.get('event_date', ''),
-            row.get('hazard_level', ''),
-            int(row.get('response_time_minutes', 0) or 0)
-        )
-    except ValueError:
-        print(f"Invalid data found in row: {row}")
-        return None
-
-
+#Function to display all requests
 def display_all_requests(requests):
     print("\n--- ALL SERVICE REQUESTS ---")
     for request in requests:
         print(request.display_request())
 
-
-def search_requests(requests):
-    keyword = input("Enter keyword to search (name/location/status): ").lower()
-    results = [
-        r for r in requests
-        if keyword in r.requester_name.lower()
-        or keyword in r.location.lower()
-        or keyword in r.status.lower()
-    ]
-
-    print("\n--- SEARCH RESULTS ---")
-    if results:
-        for r in results:
-            print(r.display_request())
-    else:
-        print("No matching requests found.")
-
-
+#Function to add single request
 def add_request(requests):
     print("\n--- ADD NEW REQUEST ---")
     try:
@@ -67,18 +30,30 @@ def add_request(requests):
     except ValueError:
         print("Invalid input. Request not added.")
 
+#Function to search requests by requester, location, status
+def search_requests(requests):
+    keyword = input("Enter keyword to search (name/location/status): ").lower()
+    results = [
+        r for r in requests
+        if keyword in r.requester_name.lower()
+        or keyword in r.location.lower()
+        or keyword in r.status.lower()
+    ]
+
+    print("\n--- SEARCH RESULTS ---")
+    if results:
+        for request in results:
+            print(request.display_request())
+    else:
+        print("No matching requests found.")
+
+
 
 def main():
     csv_reader = CSVReaderService("data/service_requests.csv")
-    rows = csv_reader.get_requests()
+    requests = csv_reader.load_requests()
 
-    requests = []
-
-    for row in rows:
-        request = row_to_request(row)
-        if request:
-            requests.append(request)
-
+#Prints menu
     while True:
         print("\n--- MUNICIPAL SERVICE SYSTEM ---")
         print("1. View All Requests")
