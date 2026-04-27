@@ -1,5 +1,10 @@
 #Initialize all attributes of a service request
+
 class Request:
+    # 
+    #    Initialize a Request object with all possible fields
+    #    Possible some fields may be unused depending on request type.
+    #
     def __init__(self, request_id, requester_name, location, urgency_level,
                  estimated_cost, status, issue_type="", days_open=0,
                  attendees=0, event_date="", hazard_level="",
@@ -33,7 +38,10 @@ class Request:
         else:
             return "No immediate action needed."
 
-#Displays all attributes of a request
+    # Displays all attributes of a request
+    # Return a formatted string containing:
+    #    - all request attributes
+    #    - recommendation from get_recommendation()
     def display_request(self):
         return (
             f"ID: {self.request_id} | "
@@ -50,7 +58,13 @@ class Request:
             f"Response Time: {self.response_time_minutes} minutes | "
             f"Recommendation: {self.get_recommendation()}"
         )
-#Converts each object to a dictionary
+        
+    #    
+    # CREATE a dictionary
+    # MAP each of its attributes to its CSV column name
+    # RETURN the dictionary
+    #
+    
     def to_csv_row(self):
         return {
             "request_id": self.request_id,
